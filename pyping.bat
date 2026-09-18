@@ -1,5 +1,5 @@
 @echo off
-title PYping
+title BDO SA Ping
 color 1a
-python pyping.py
+python -m src.main
 pause

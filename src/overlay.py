@@ -1,28 +1,8 @@
-import socket
-import time
 import tkinter as tk
 import threading
-
-# --- CONFIGURAÇÕES DO SERVIDOR DO BDO ---
-IP_SERVIDOR_BDO = "20.206.139.219"
-PORTA_BDO = 8884
-INTERVALO_MILISSEGUNDOS = 1000  # O Tkinter trabalha melhor com milissegundos (1000ms = 1s)
-
-
-def disparar_ping(host, porta):
-    timeout_segundos = 1.0  # Timeout curto para evitar acúmulo de threads
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(timeout_segundos)
-            antes = time.time()
-            s.connect((host, porta))
-            s.recv(32)  # Baixado para 32 bytes apenas para validar a resposta rápida
-            depois = time.time()
-            return int((depois - antes) * 1000)
-    except Exception:
-        # Captura qualquer erro de rede de forma genérica para não quebrar a thread
-        return -1
-
+# Importando as funções e variáveis dos seus novos arquivos:
+from src.config import IP_SERVIDOR_BDO, PORTA_BDO, INTERVALO_MILISSEGUNDOS
+from src.ping import disparar_ping
 
 class PingOverlay:
     def __init__(self):
@@ -32,7 +12,6 @@ class PingOverlay:
         self.root.attributes("-topmost", True)  # Sempre no topo do jogo
 
         # Windows Bugfix: Fundo ligeiramente diferente de puro preto (0,0,0)
-        # para evitar que o Windows ignore cliques ou suma com o widget
         self.root.config(bg="#010101")
         self.root.attributes("-transparentcolor", "#010101")
 
@@ -56,9 +35,6 @@ class PingOverlay:
         self.label.bind("<Button-1>", self.iniciar_arrasto)
         self.label.bind("<B1-Motion>", self.arrastar_janela)
 
-        # Atalho de teclado de segurança: Pressione ESC para fechar o script
-        # self.root.bind("<Escape>", lambda e: self.root.destroy())
-
         # Inicia o ciclo de atualização seguro
         self.atualizar_ping_seguro()
 
@@ -80,7 +56,6 @@ class PingOverlay:
             if self.root.winfo_exists():
                 self.root.after(0, self.atualizar_interface, tempo)
         finally:
-            # Garante que a flag volte para False mesmo se o código falhar drasticamente
             self.thread_ativa = False
 
     def atualizar_interface(self, tempo):
@@ -106,14 +81,8 @@ class PingOverlay:
             t = threading.Thread(target=self.executar_ping_async, daemon=True)
             t.start()
 
-        # Agenda a próxima execução de forma limpa, liberando a memória da atual
         if self.root.winfo_exists():
             self.root.after(INTERVALO_MILISSEGUNDOS, self.atualizar_ping_seguro)
 
     def iniciar(self):
         self.root.mainloop()
-
-
-if __name__ == "__main__":
-    app = PingOverlay()
-    app.iniciar()

@@ -1,0 +1,4 @@
+# --- CONFIGURAÇÕES DO SERVIDOR DO BDO ---
+IP_SERVIDOR_BDO = "20.206.139.219"
+PORTA_BDO = 8884
+INTERVALO_MILISSEGUNDOS = 1000  # Tempo de atualização em milissegundos (1000ms = 1s)
