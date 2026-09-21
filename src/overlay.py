@@ -1,8 +1,31 @@
 import tkinter as tk
 import threading
+import win32gui
+import win32process
+import psutil
 # Importando as funções e variáveis dos seus novos arquivos:
 from src.config import IP_SERVIDOR_BDO, PORTA_BDO, INTERVALO_MILISSEGUNDOS
 from src.ping import disparar_ping
+
+# Nome do processo do jogo. Ajuste aqui se o executável tiver outro nome.
+NOME_PROCESSO_JOGO = "BlackDesert64.exe"
+
+# Intervalo (ms) para checar qual janela está em primeiro plano
+INTERVALO_CHECAGEM_JANELA_MS = 300
+
+
+def janela_ativa_e_do_jogo():
+    """Retorna True se a janela em primeiro plano pertencer ao processo do jogo."""
+    try:
+        hwnd = win32gui.GetForegroundWindow()
+        if not hwnd:
+            return False
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+        nome_processo = psutil.Process(pid).name()
+        return nome_processo.lower() == NOME_PROCESSO_JOGO.lower()
+    except Exception:
+        return False
+
 
 class PingOverlay:
     def __init__(self):
@@ -35,8 +58,14 @@ class PingOverlay:
         self.label.bind("<Button-1>", self.iniciar_arrasto)
         self.label.bind("<B1-Motion>", self.arrastar_janela)
 
+        # Controla se o overlay está atualmente visível
+        self.overlay_visivel = True
+
         # Inicia o ciclo de atualização seguro
         self.atualizar_ping_seguro()
+
+        # Inicia o ciclo que mostra/esconde o overlay conforme a janela ativa
+        self.checar_janela_ativa()
 
     def iniciar_arrasto(self, event):
         self.x = event.x
@@ -83,6 +112,22 @@ class PingOverlay:
 
         if self.root.winfo_exists():
             self.root.after(INTERVALO_MILISSEGUNDOS, self.atualizar_ping_seguro)
+
+    def checar_janela_ativa(self):
+        """Mostra o overlay apenas quando o BDO está em primeiro plano."""
+        if not self.root.winfo_exists():
+            return
+
+        deve_mostrar = janela_ativa_e_do_jogo()
+
+        if deve_mostrar and not self.overlay_visivel:
+            self.root.deiconify()
+            self.overlay_visivel = True
+        elif not deve_mostrar and self.overlay_visivel:
+            self.root.withdraw()
+            self.overlay_visivel = False
+
+        self.root.after(INTERVALO_CHECAGEM_JANELA_MS, self.checar_janela_ativa)
 
     def iniciar(self):
         self.root.mainloop()
