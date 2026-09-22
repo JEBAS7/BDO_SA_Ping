@@ -52,6 +52,8 @@ BDO_SA_Ping/
 2. Dê dois cliques no arquivo `pyping.bat` localizado na raiz do projeto. 
 3. O overlay aparecerá na sua tela instantaneamente.
 
+### Fechar aplicativo
+Caso queira fechar aplicação basta clicar com direito do mouse em cima do BDO ping
 ### Execução via Terminal
 Caso prefira rodar manualmente pelo terminal ou prompt de comando na raiz do projeto:
 ```bash

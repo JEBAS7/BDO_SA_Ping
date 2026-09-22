@@ -3,6 +3,7 @@ import threading
 import win32gui
 import win32process
 import psutil
+import sys
 # Importando as funções e variáveis dos seus novos arquivos:
 from src.config import IP_SERVIDOR_BDO, PORTA_BDO, INTERVALO_MILISSEGUNDOS
 from src.ping import disparar_ping
@@ -54,9 +55,13 @@ class PingOverlay:
         )
         self.label.pack()
 
-        # Arrastar a janela com o mouse
+        # CONTROLES DO MOUSE:
+        # Clique com o botão esquerdo (Button-1) para arrastar
         self.label.bind("<Button-1>", self.iniciar_arrasto)
         self.label.bind("<B1-Motion>", self.arrastar_janela)
+
+        # NOVO: Clique com o botão DIREITO (Button-3) para FECHAR o aplicativo
+        self.label.bind("<Button-3>", self.fechar_aplicativo)
 
         # Controla se o overlay está atualmente visível
         self.overlay_visivel = True
@@ -128,6 +133,12 @@ class PingOverlay:
             self.overlay_visivel = False
 
         self.root.after(INTERVALO_CHECAGEM_JANELA_MS, self.checar_janela_ativa)
+
+    def fechar_aplicativo(self, event=None):
+        """Fecha o overlay e encerra o processo do Python completamente."""
+        if self.root.winfo_exists():
+            self.root.destroy()
+        sys.exit(0)
 
     def iniciar(self):
         self.root.mainloop()
