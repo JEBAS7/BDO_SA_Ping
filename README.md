@@ -6,6 +6,13 @@
 Um utilitário leve e limpo desenvolvido em Python para monitorar a latência (ping) em tempo real diretamente na tela do jogo **Black Desert Online (Servidor SA)**. O programa cria uma sobreposição (overlay) transparente e móvel, permitindo que você acompanhe a estabilidade da sua conexão sem perder o foco na gameplay.
 
 ---
+## 🛠️ Por que este projeto foi criado?
+Como jogador de BDO, senti muita falta de um monitor de ping nativo dentro do jogo. Após sugerir essa implementação para a Pearl Abyss diversas vezes e não obter retorno, decidi criar uma solução própria, leve e focada na comunidade do servidor SA.
+
+## ⚔️ Benefícios no Jogo:
+- **Evite mortes em spots:** Monitore sua conexão em tempo real enquanto faz o seu grind e evite surpresas com picos de lag que podem destruir seus cristais.
+- **Navegação segura:** Não perca o seu barco de vista por causa de dessincronização com o servidor, evitando ter que nadar longas distâncias para alcançá-lo.
+- **Leve e Seguro:** Desenvolvido para não impactar o FPS do seu jogo e assinado digitalmente para garantir a segurança da instalação.
 
 ## ✨ Funcionalidades
 
