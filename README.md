@@ -58,8 +58,7 @@ Este projeto é um **monitor externo**, não um cheat. Ele **não interage** com
 
 ### Assinatura
 
-O executável é assinado digitalmente com certificado **self-signed** (Authenticode), por ser um projeto gratuito e sem fins lucrativos. O Windows SmartScreen pode exibir um alerta na primeira execução — clique em "Mais informações" → "Executar assim mesmo". O código é 100% aberto e auditável neste repositório.
-
+O executável é assinado com certificado self-signed, que garante a integridade do arquivo (não foi alterado após a publicação) e tem timestamp válido. Por ser um projeto gratuito e de código aberto, não usamos certificado comercial pago — o que significa que o Windows SmartScreen pode exibir um alerta na primeira execução. A confiança vem do código-fonte auditável, disponível neste repositório.
 ---
 
 ## 📁 Estrutura do Projeto
