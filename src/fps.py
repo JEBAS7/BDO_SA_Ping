@@ -10,11 +10,15 @@ Como funciona:
 
 Sobre as telas de carregamento:
 - Durante o carregamento o jogo apresenta milhares de quadros por segundo, mais
-  do que o Python consegue processar (~450 eventos/s). O Windows guarda o
-  excesso numa fila, e o overlay ficava dezenas de segundos lendo eventos
-  antigos. Agora, se o atraso passar de ~3 s, a sessão de captura é reiniciada
-  (a fila velha é jogada fora) e o overlay volta a ler eventos atuais.
+  do que o Python consegue processar (~450 eventos/s). Se o atraso passar de
+  ~3 s, a sessão de captura é reiniciada (a fila velha é jogada fora).
 - Valores acima de 1000 FPS são tratados como "sem valor" (é a tela de loading).
+
+Sobre sessões ETW "esquecidas":
+- Se o programa for encerrado à força (botão Stop do PyCharm), a sessão de
+  captura fica aberta no Windows. O Windows aceita só 8 sessões por provedor;
+  quando o limite é atingido, novas sessões não recebem evento nenhum.
+  Por isso, ao iniciar, o programa fecha as sessões "BDO_FPS_*" antigas.
 
 Requisitos:
 - pip install pywintrace
@@ -23,11 +27,14 @@ Requisitos:
 Teste isolado (na pasta do projeto, como administrador):
     python -m src.fps
 """
+import atexit
 import inspect
 import os
+import subprocess
 import threading
 import time
 from collections import deque
+
 
 import psutil
 
@@ -39,17 +46,19 @@ except Exception:  # biblioteca não instalada
 
 GUID_DXGI = "{CA11C036-0102-4A2D-A6AD-F03CFED5D3C9}"  # Microsoft-Windows-DXGI
 ID_PRESENT_START = 42
+PREFIXO_SESSAO = "BDO_FPS_"
 SEGUNDOS_1601_ATE_1970 = 11644473600.0  # o TimeStamp do ETW é um FILETIME (desde 1601)
 ATRASO_MAXIMO_S = 8.0          # eventos mais velhos que isso são descartados
 LIMITE_REINICIO_S = 3.0        # atraso acima disso => reinicia a sessão de captura
 INTERVALO_MIN_REINICIO_S = 3.0 # tempo mínimo entre dois reinícios
-ESPERA_FILTRO_S = 8.0          # se o filtro não entregar nada nesse tempo, volta ao modo sem filtro
+ESPERA_FILTRO_S = 8.0          # espera antes de concluir que o filtro/sessão não entrega nada
 FPS_MAXIMO_VALIDO = 1000       # acima disso é tela de carregamento: não mostra
+MSG_SEM_EVENTOS = "Nenhum evento recebido do Windows (sessões ETW antigas abertas?)"
 
 
 class MedidorFPS:
     # O 1º parâmetro é ignorado (só existe para manter compatível com o overlay.py)
-    def __init__(self, caminho_presentmon=None, nome_processo_exe="BlackDesert64.exe"):
+    def __init__(self, nome_processo_exe="BlackDesert64.exe"):
         self.nome_processo_exe = nome_processo_exe.lower()
         self.erro = None
 
@@ -59,6 +68,8 @@ class MedidorFPS:
         self._rodando = False
         self._job = None
         self._geracao = 0         # identifica a sessão atual (eventos de sessões velhas são ignorados)
+        self._nome_sessao = None
+        self._limpeza_tentada = False
         self._ultimo_evento = 0.0
         self._atraso = 0.0        # quanto o Python está atrasado em relação ao Windows
 
@@ -82,13 +93,35 @@ class MedidorFPS:
             print("[FPS]", self.erro)
             return
         self._rodando = True
+        atexit.register(self.parar)  # fecha a sessão ETW se o programa terminar normalmente
+        atexit.register(self._cleanup_etw)  # cleanup extra caso o app seja morto abruptamente
         threading.Thread(target=self._loop, daemon=True).start()
 
     def parar(self):
+        """Para a sessão ETW explicitamente."""
+        try:
+            if self._nome_sessao:
+                subprocess.run(
+                    ["logman", "stop", self._nome_sessao, "-ets"],
+                    capture_output=True, timeout=5
+                )
+        except Exception:
+            pass
         self._rodando = False
         self._geracao += 1
         job, self._job = self._job, None
         self._parar_job(job)
+
+    def _cleanup_etw(self):
+        """Cleanup de emergência — roda mesmo se o app for morto abruptamente."""
+        try:
+            if self._nome_sessao:
+                subprocess.run(
+                    ["logman", "stop", self._nome_sessao, "-ets"],
+                    capture_output=True, timeout=3
+                )
+        except Exception:
+            pass
 
     def valor(self):
         """FPS atual (int) ou None se o jogo não está enviando quadros."""
@@ -120,6 +153,30 @@ class MedidorFPS:
             except Exception:
                 pass
 
+    @staticmethod
+    def _limpar_sessoes_antigas(manter=None):
+        """Fecha sessões ETW 'BDO_FPS_*' que ficaram abertas de execuções anteriores."""
+        try:
+            saida = subprocess.run(
+                ["logman", "query", "-ets"],
+                capture_output=True, text=True, encoding="utf-8", errors="ignore",
+                creationflags=subprocess.CREATE_NO_WINDOW, timeout=20,
+            ).stdout
+        except Exception:
+            return
+        for linha in saida.splitlines():
+            partes = linha.split()
+            if not partes or not partes[0].startswith(PREFIXO_SESSAO) or partes[0] == manter:
+                continue
+            try:
+                subprocess.run(
+                    ["logman", "stop", partes[0], "-ets"],
+                    capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=20,
+                )
+                print(f"[FPS] Sessão ETW antiga fechada: {partes[0]}")
+            except Exception:
+                pass
+
     def _criar_job(self, usar_filtro):
         geracao = self._geracao
 
@@ -139,7 +196,8 @@ class MedidorFPS:
             kwargs["event_id_filters"] = [ID_PRESENT_START]
         if "session_name" in aceitos:
             # Nome único por sessão, para uma nova poder subir antes da velha terminar de parar
-            kwargs["session_name"] = f"BDO_FPS_{os.getpid()}_{geracao}"
+            self._nome_sessao = f"{PREFIXO_SESSAO}{os.getpid()}_{geracao}"
+            kwargs["session_name"] = self._nome_sessao
 
         self.parametros_usados = {k: v for k, v in kwargs.items() if k not in ("providers", "event_callback")}
         return etw.ETW(**kwargs)
@@ -168,6 +226,8 @@ class MedidorFPS:
             print(f"[FPS] Falha ao reiniciar a sessão ETW: {e}")
 
     def _loop(self):
+        # Fecha sessões que ficaram abertas quando o programa anterior foi encerrado à força
+        self._limpar_sessoes_antigas()
         try:
             self._iniciar_sessao(usar_filtro=True)
         except Exception as e:
@@ -181,7 +241,7 @@ class MedidorFPS:
             if agora - ultima_checagem_pids >= 3.0:
                 ultima_checagem_pids = agora
                 self._atualizar_pids()   # o jogo pode ser reaberto
-                self._vigiar_filtro()
+                self._vigiar_sessao()
             self._vigiar_atraso()
             time.sleep(0.5)
 
@@ -191,22 +251,37 @@ class MedidorFPS:
             print(f"[FPS] Fila atrasada ({self._atraso:.1f}s); reiniciando a captura.")
             self._reiniciar_sessao()
 
-    def _vigiar_filtro(self):
-        """Se o filtro por id não entregar evento nenhum, reinicia sem filtro."""
-        if self.modo != "filtro" or not self._pids:
+    def _vigiar_sessao(self):
+        """Detecta filtro que não entrega nada e sessão ETW 'morta' (sem evento nenhum)."""
+        if not self._pids or (time.time() - self._inicio_sessao) < ESPERA_FILTRO_S:
             return
-        if (time.time() - self._inicio_sessao) < ESPERA_FILTRO_S:
+
+        if self.modo == "filtro":
+            if self._cont["do_jogo"] == 0 and self._cont["atrasados"] == 0:
+                print("[FPS] O filtro não entregou eventos do jogo; reiniciando sem filtro.")
+                self._geracao += 1
+                velho, self._job = self._job, None
+                self._parar_job(velho)
+                try:
+                    self._iniciar_sessao(usar_filtro=False)
+                except Exception as e:
+                    self.erro = f"Falha ao reiniciar ETW: {e}"
+                    print("[FPS]", self.erro)
             return
-        if self._cont["do_jogo"] == 0 and self._cont["atrasados"] == 0:
-            print("[FPS] O filtro não entregou eventos do jogo; reiniciando sem filtro.")
-            self._geracao += 1
-            velho, self._job = self._job, None
-            self._parar_job(velho)
-            try:
-                self._iniciar_sessao(usar_filtro=False)
-            except Exception as e:
-                self.erro = f"Falha ao reiniciar ETW: {e}"
-                print("[FPS]", self.erro)
+
+        # Modo sem filtro: o jogo gera ~11 eventos por quadro. Se não chegou NADA,
+        # a sessão está morta (por exemplo, limite de 8 sessões por provedor).
+        if self._cont["recebidos"] == 0:
+            if not self._limpeza_tentada:
+                self._limpeza_tentada = True
+                print("[FPS] Nenhum evento recebido; fechando sessões ETW antigas e tentando de novo.")
+                self._limpar_sessoes_antigas(manter=self._nome_sessao)
+                self._reiniciar_sessao()
+            elif not self.erro:
+                self.erro = MSG_SEM_EVENTOS
+                print("[FPS]", self.erro, "- reinicie o Windows ou feche as sessões com 'logman'.")
+        elif self.erro == MSG_SEM_EVENTOS:
+            self.erro = None  # voltou a receber eventos
 
     def _atualizar_pids(self):
         pids = set()
@@ -270,5 +345,5 @@ if __name__ == "__main__":
         c = m._cont
         print(f"FPS: {m.valor()} | atraso: {m.atraso():.1f}s | sem evento há: {m.sem_evento_ha():.1f}s | "
               f"reinícios: {m.reinicios} | recebidos: {c['recebidos']} do_jogo: {c['do_jogo']} | "
-              f"modo: {m.modo} | erro: {m.erro}")
+              f"PIDs: {m._pids} | modo: {m.modo} | erro: {m.erro}")
     m.parar()

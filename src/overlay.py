@@ -46,7 +46,7 @@ class PingOverlay:
         self.ping_atual = "--"
         self.cor_texto = "#00FF00"
 
-        # Medidor de FPS real
+        # Medidor de FPS real (PresentMon)
         self.medidor_fps = MedidorFPS(nome_processo_exe=NOME_PROCESSO_EXE)
         self.medidor_fps.iniciar()
 
@@ -120,13 +120,14 @@ class PingOverlay:
         self.label_ping.config(text=f"BDO Ping: {self.ping_atual}", fg=self.cor_texto)
 
     def atualizar_fps(self):
-        """Lê o FPS real medido pelo fps.py e mostra na tela."""
+        """Lê o FPS real medido pelo PresentMon e mostra na tela."""
         if not self.root.winfo_exists():
             return
 
         cor = "#AAAAAA"  # cinza quando não há valor
         if self.medidor_fps.erro:
             texto = "FPS: N/D"
+            cor = "#FF3333"   # vermelho: problema na captura
         else:
             valor = self.medidor_fps.valor()
             if valor is None:
@@ -165,7 +166,7 @@ class PingOverlay:
         self.root.after(INTERVALO_CHECAGEM_JANELA_MS, self.checar_janela_ativa)
 
     def fechar_aplicativo(self, event=None):
-        self.medidor_fps.parar()
+        self.medidor_fps.parar()  # encerra o PresentMon junto
         if self.root.winfo_exists():
             self.root.destroy()
         sys.exit(0)
