@@ -1,34 +1,33 @@
 # UTF-8
 #
-# For more details about fixed file info 'flags' see
-# https://microsoft.com
-# For language IDs see
-# https://microsoft.com
+# Para mais informações sobre o formato, veja:
+# https://learn.microsoft.com/en-us/windows/win32/menurc/versioninfo-resource
+
 VSVersionInfo(
   ffi=FixedFileInfo(
-    filevers=(1, 0, 0, 0),
-    prodvers=(1, 0, 0, 0),
+    filevers=(1, 0, 1, 0),
+    prodvers=(1, 0, 1, 0),
     mask=0x3f,
     flags=0x0,
     OS=0x40004,
     fileType=0x1,
     subtype=0x0,
     date=(0, 0)
-    ),
+  ),
   kids=[
-    StringFileInfo(
-      [
+    StringFileInfo([
       StringTable(
-        '041604b0',
-        [StringStruct('CompanyName', 'JEBASS BISPO'),
-        StringStruct('FileDescription', 'BDO_SA_Ping Overlay para Black Desert Online SA'),
-        StringStruct('FileVersion', '1.0.0.0'),
-        StringStruct('InternalName', 'BDO_SA_Ping'),
-        StringStruct('LegalCopyright', '© 2026 Todos os direitos reservados, JEBASS'),
-        StringStruct('OriginalFilename', 'BDO_SA_Ping.exe'),
-        StringStruct('ProductName', 'BDO_SA_Ping Overlay'),
-        StringStruct('ProductVersion', '1.0.0.0')])
-      ]),
-    VarFileInfo([VarStruct('Translation', [1046, 1200])])
+        '040904B0',
+        [StringStruct('CompanyName', 'JEBAS7'),
+         StringStruct('FileDescription', 'BDO SA Ping Overlay'),
+         StringStruct('FileVersion', '1.0.1.0'),
+         StringStruct('InternalName', 'BDO_SA_Ping'),
+         StringStruct('LegalCopyright', 'MIT License - JEBAS7'),
+         StringStruct('OriginalFilename', 'BDO_SA_Ping.exe'),
+         StringStruct('ProductName', 'BDO SA Ping'),
+         StringStruct('ProductVersion', '1.0.1.0'),
+         StringStruct('Comments', 'Monitor de ping e FPS para Black Desert Online (Servidor SA)')])
+    ]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
   ]
 )
