@@ -2,7 +2,7 @@
 ; https://github.com/JEBAS7/BDO_SA_Ping
 
 #define MyAppName "BDO SA Ping"
-#define MyAppVersion "1.0.1"
+#define MyAppVersion "1.0.1.1"
 #define MyAppPublisher "JEBAS7"
 #define MyAppURL "https://github.com/JEBAS7/BDO_SA_Ping"
 #define MyAppExeName "BDO_SA_Ping.exe"
