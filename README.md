@@ -12,8 +12,7 @@ Como jogador de BDO, senti muita falta de um monitor de ping e FPS nativo dentro
 ## ⚔️ Benefícios no Jogo:
 - **Evite mortes em spots:** Monitore sua conexão em tempo real enquanto faz o seu grind e evite surpresas com picos de lag que podem destruir seus cristais.
 - **Navegação segura:** Não perca o seu barco de vista por causa de dessincronização com o servidor, evitando ter que nadar longas distâncias para alcançá-lo.
-- **Leve e Seguro:** Desenvolvido para não impactar o FPS do seu jogo. Não injeta código, não lê a memória do jogo e não interage com o processo do
-- BDO  apenas usa APIs nativas do Windows (ETW/DXGI) para FPS e sockets UDP/TCP para medir latência, da mesma forma que ferramentas como Discord, Steam.
+- **Leve e Seguro:** Desenvolvido para não impactar o FPS do seu jogo. Não injeta código, não lê a memória do jogo e não interage com o processo do BDO apenas usa APIs nativas do Windows (ETW/DXGI) para FPS e sockets UDP/TCP para medir latência, da mesma forma que ferramentas como Discord, Steam.
 
 ## ✨ Funcionalidades
 
