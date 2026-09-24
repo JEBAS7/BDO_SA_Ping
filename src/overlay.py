@@ -46,7 +46,7 @@ class PingOverlay:
         self.ping_atual = "--"
         self.cor_texto = "#00FF00"
 
-        # Medidor de FPS real (PresentMon)
+        # Medidor de FPS real
         self.medidor_fps = MedidorFPS(nome_processo_exe=NOME_PROCESSO_EXE)
         self.medidor_fps.iniciar()
 
@@ -166,7 +166,7 @@ class PingOverlay:
         self.root.after(INTERVALO_CHECAGEM_JANELA_MS, self.checar_janela_ativa)
 
     def fechar_aplicativo(self, event=None):
-        self.medidor_fps.parar()  # encerra o PresentMon junto
+        self.medidor_fps.parar()
         if self.root.winfo_exists():
             self.root.destroy()
         sys.exit(0)

@@ -255,7 +255,7 @@ class MedidorFPS:
         """Detecta sessão ETW 'morta' (sem evento nenhum) e tenta se curar sozinha.
 
         Isso cobre o caso de o app anterior ter sido morto pelo Gerenciador de
-        Tarefas: a sessão órfã fica seguranco o limite de 8 sessões por
+        Tarefas: a sessão órfã fica segurando o limite de 8 sessões por
         provedor, e a sessão nova (mesmo no modo "filtro") não recebe nenhum
         evento. Antes de trocar de modo, tentamos limpar sessões órfãs e
         reiniciar — isso resolve o caso sem precisar rodar 'logman' na mão.
