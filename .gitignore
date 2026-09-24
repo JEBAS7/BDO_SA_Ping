@@ -19,3 +19,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# pyinstaller arquivos
+build/
+dist/
+dist_installer/
