@@ -252,36 +252,58 @@ class MedidorFPS:
             self._reiniciar_sessao()
 
     def _vigiar_sessao(self):
-        """Detecta filtro que não entrega nada e sessão ETW 'morta' (sem evento nenhum)."""
+        """Detecta sessão ETW 'morta' (sem evento nenhum) e tenta se curar sozinha.
+
+        Isso cobre o caso de o app anterior ter sido morto pelo Gerenciador de
+        Tarefas: a sessão órfã fica seguranco o limite de 8 sessões por
+        provedor, e a sessão nova (mesmo no modo "filtro") não recebe nenhum
+        evento. Antes de trocar de modo, tentamos limpar sessões órfãs e
+        reiniciar — isso resolve o caso sem precisar rodar 'logman' na mão.
+        """
         if not self._pids or (time.time() - self._inicio_sessao) < ESPERA_FILTRO_S:
             return
 
         if self.modo == "filtro":
-            if self._cont["do_jogo"] == 0 and self._cont["atrasados"] == 0:
-                print("[FPS] O filtro não entregou eventos do jogo; reiniciando sem filtro.")
-                self._geracao += 1
-                velho, self._job = self._job, None
-                self._parar_job(velho)
-                try:
-                    self._iniciar_sessao(usar_filtro=False)
-                except Exception as e:
-                    self.erro = f"Falha ao reiniciar ETW: {e}"
-                    print("[FPS]", self.erro)
+            sem_eventos = self._cont["do_jogo"] == 0 and self._cont["atrasados"] == 0
+        else:
+            # Modo sem filtro: o jogo gera ~11 eventos por quadro. Se não chegou
+            # NADA, a sessão está morta.
+            sem_eventos = self._cont["recebidos"] == 0
+
+        if not sem_eventos:
+            if self.erro == MSG_SEM_EVENTOS:
+                self.erro = None  # voltou a receber eventos
             return
 
-        # Modo sem filtro: o jogo gera ~11 eventos por quadro. Se não chegou NADA,
-        # a sessão está morta (por exemplo, limite de 8 sessões por provedor).
-        if self._cont["recebidos"] == 0:
-            if not self._limpeza_tentada:
-                self._limpeza_tentada = True
-                print("[FPS] Nenhum evento recebido; fechando sessões ETW antigas e tentando de novo.")
-                self._limpar_sessoes_antigas(manter=self._nome_sessao)
-                self._reiniciar_sessao()
-            elif not self.erro:
-                self.erro = MSG_SEM_EVENTOS
-                print("[FPS]", self.erro, "- reinicie o Windows ou feche as sessões com 'logman'.")
-        elif self.erro == MSG_SEM_EVENTOS:
-            self.erro = None  # voltou a receber eventos
+        if not self._limpeza_tentada:
+            # 1ª tentativa, em qualquer modo: pode ser sessão órfã de uma
+            # execução anterior encerrada à força. Limpa e reinicia no mesmo modo.
+            self._limpeza_tentada = True
+            print(f"[FPS] Sem eventos no modo '{self.modo}'; fechando sessões ETW "
+                  f"antigas e tentando de novo.")
+            self._limpar_sessoes_antigas(manter=self._nome_sessao)
+            self._reiniciar_sessao()
+            return
+
+        if self.modo == "filtro":
+            # A limpeza não resolveu: tenta sem filtro (pode ser questão de
+            # compatibilidade do filtro nessa versão do pywintrace/Windows).
+            print("[FPS] Ainda sem eventos do jogo com filtro; tentando sem filtro.")
+            self._limpeza_tentada = False  # permite tentar limpar de novo no modo sem_filtro
+            self._geracao += 1
+            velho, self._job = self._job, None
+            self._parar_job(velho)
+            try:
+                self._iniciar_sessao(usar_filtro=False)
+            except Exception as e:
+                self.erro = f"Falha ao reiniciar ETW: {e}"
+                print("[FPS]", self.erro)
+            return
+
+        # Já tentamos limpar e trocar de modo; não tem mais o que fazer sozinho.
+        if not self.erro:
+            self.erro = MSG_SEM_EVENTOS
+            print("[FPS]", self.erro, "- reinicie o Windows ou feche as sessões com 'logman'.")
 
     def _atualizar_pids(self):
         pids = set()
