@@ -46,7 +46,7 @@ BDO_SA_Ping/
 ├── src/
 │   ├── __init__.py      # Inicializador do pacote
 │   ├── config.py        # Variáveis de ambiente e IPs dos servidores
-    ├── fps.py           # pywintrace para "escutar" os eventos do Windows (ETW) do provedor Microsoft-Windows-DXGI monitor de FPS
+│   ├── fps.py           # pywintrace para "escutar" os eventos do Windows (ETW) do provedor Microsoft-Windows-DXGI monitor de FPS
 │   ├── ping.py          # Lógica de comunicação de rede
 │   ├── overlay.py       # Interface gráfica e loop assíncrono
 │   └── main.py          # Ponto de entrada (Entrypoint) do programa
