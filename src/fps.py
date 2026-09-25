@@ -51,6 +51,10 @@ SEGUNDOS_1601_ATE_1970 = 11644473600.0  # o TimeStamp do ETW é um FILETIME (des
 ATRASO_MAXIMO_S = 8.0          # eventos mais velhos que isso são descartados
 LIMITE_REINICIO_S = 3.0        # atraso acima disso => reinicia a sessão de captura
 INTERVALO_MIN_REINICIO_S = 3.0 # tempo mínimo entre dois reinícios
+LIMITE_PARADA_S = 6.0          # sem NENHUM evento aceito por mais que isso => reinicia
+                                # (cobre o caso do jogo rodando normal, mas o Windows
+                                # parar de mandar Present_Start; o _atraso sozinho não
+                                # detecta isso porque ele congela no último valor)
 ESPERA_FILTRO_S = 8.0          # espera antes de concluir que o filtro/sessão não entrega nada
 FPS_MAXIMO_VALIDO = 1000       # acima disso é tela de carregamento: não mostra
 MSG_SEM_EVENTOS = "Nenhum evento recebido do Windows (sessões ETW antigas abertas?)"
@@ -243,12 +247,30 @@ class MedidorFPS:
                 self._atualizar_pids()   # o jogo pode ser reaberto
                 self._vigiar_sessao()
             self._vigiar_atraso()
+            self._vigiar_parada()
             time.sleep(0.5)
 
     def _vigiar_atraso(self):
         """Se o Python ficou muito atrasado em relação ao Windows, reinicia a captura."""
         if self._atraso > LIMITE_REINICIO_S and (time.time() - self._ultimo_reinicio) > INTERVALO_MIN_REINICIO_S:
             print(f"[FPS] Fila atrasada ({self._atraso:.1f}s); reiniciando a captura.")
+            self._reiniciar_sessao()
+
+    def _vigiar_parada(self):
+        """Detecta o caso em que a captura para de receber eventos NO MEIO do jogo
+        (jogo rodando normal, não é tela de loading). Diferente de _vigiar_atraso
+        (que depende de _atraso subir) e de _vigiar_sessao (que olha contadores
+        acumulados desde o início da sessão e por isso nunca volta a "zero"
+        depois do primeiro evento), aqui olhamos direto o tempo desde o ÚLTIMO
+        evento aceito do jogo. É o mesmo valor que faz valor() cair para None
+        (o "--" cinza no overlay) — então, se ficou tempo demais assim, força
+        um reinício da sessão em vez de deixar cinza para sempre.
+        """
+        if not self._pids or not self._ultimo_evento:
+            return
+        parado_ha = time.time() - self._ultimo_evento
+        if parado_ha > LIMITE_PARADA_S and (time.time() - self._ultimo_reinicio) > INTERVALO_MIN_REINICIO_S:
+            print(f"[FPS] Sem eventos do jogo há {parado_ha:.1f}s; reiniciando a captura.")
             self._reiniciar_sessao()
 
     def _vigiar_sessao(self):
