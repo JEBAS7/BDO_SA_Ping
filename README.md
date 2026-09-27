@@ -28,11 +28,12 @@ Como jogador de BDO, senti muita falta de um monitor de ping e FPS nativo dentro
   - 🟡 **Amarelo:** Conexão moderada (< 90ms)
   - 🔴 **Vermelho:** Latência alta ou falha de conexão
 
-  **FPS**
+    **FPS**
   - 🟢 **Verde:** FPS Bom (> 60 FPS)
   - 🟡 **Amarelo:** FPS Razoável (entre 59 FPS e 20 FPS)
   - 🔴 **Vermelho:** FPS Ruim (< 20 FPS)
-  - ⚪ **Cinza:** FPS -- (> 1000 FPS ou falha)
+  - 🟢 **Verde, "999" fixo:** captura se autocorrigindo internamente (reinício rápido de sessão durante loadings/transições) — não é uma leitura real, só evita mostrar "--" piscando nesse meio-tempo
+  - ⚪ **Cinza:** FPS -- indica falha real de captura (jogo fechado ou sem conseguir se recuperar)
 
 - **Arrastável:** Clique e arraste o contador para qualquer lugar da tela com o mouse.
 - **Assíncrono e Seguro:** Desenvolvido com multi-threading para garantir que os testes de rede não travem a sua tela.

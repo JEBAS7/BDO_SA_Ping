@@ -68,6 +68,9 @@ LIMITE_PARADA_S = 6.0          # sem NENHUM evento aceito por mais que isso => r
 ESPERA_FILTRO_S = 8.0          # espera antes de concluir que o filtro/sessão não entrega nada
 FPS_MAXIMO_VALIDO = 1000       # acima disso é tela de carregamento: não mostra
 MSG_SEM_EVENTOS = "Nenhum evento recebido do Windows (sessões ETW antigas abertas?)"
+FPS_SENTINEL_REINICIANDO = 999  # mostrado (fixo) enquanto a sessão ETW está se
+                                 # autocorrigindo; nunca é uma leitura real —
+                                 # serve só pra não parecer travado nessa janela
 
 
 class MedidorFPS:
@@ -140,17 +143,24 @@ class MedidorFPS:
             pass
 
     def valor(self):
-        """FPS atual (int) ou None se o jogo não está enviando quadros."""
+        """FPS atual (int) se tiver leitura real;
+        FPS_SENTINEL_REINICIANDO (cravado) se estiver no meio de uma autocorreção;
+        None só se realmente não está respondendo (erro persistente ou jogo não detectado)."""
         with self._lock:
-            if len(self._quadros) < 2:
-                return None
-            if (time.time() - self._ultimo_evento) > 4.0:
-                return None
-            intervalo = self._quadros[-1] - self._quadros[0]
-            if intervalo <= 0:
-                return None
-            fps = int(round((len(self._quadros) - 1) / intervalo))
-            return fps if fps <= FPS_MAXIMO_VALIDO else None
+            if len(self._quadros) >= 2 and (time.time() - self._ultimo_evento) <= 4.0:
+                intervalo = self._quadros[-1] - self._quadros[0]
+                if intervalo > 0:
+                    fps = int(round((len(self._quadros) - 1) / intervalo))
+                    if fps <= FPS_MAXIMO_VALIDO:
+                        return fps
+
+            # Sem leitura real agora. Se o jogo já foi detectado e ainda não
+            # desistimos de nos recuperar sozinhos, mostra o cravado em vez de
+            # "--" — os reinícios de 3-20s (backoff) ficam invisíveis pro
+            # usuário final, já que o app está lidando com isso por conta própria.
+            if self._pids and not self.erro:
+                return FPS_SENTINEL_REINICIANDO
+            return None
 
     def sem_evento_ha(self):
         """Segundos desde o último quadro do jogo aceito."""
