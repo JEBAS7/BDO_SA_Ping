@@ -2,7 +2,6 @@
 
 <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/1d9a682d-b0f6-4bcb-a177-4567bcc51e0c" />
 
-
 Um utilitário leve e limpo desenvolvido em Python para monitorar a latência (ping) e FPS em tempo real diretamente na tela do jogo **Black Desert Online (Servidor SA)**. O programa cria uma sobreposição (overlay) transparente e móvel, permitindo que você acompanhe a estabilidade da sua conexão sem perder o foco na gameplay.
 
 ---
@@ -19,6 +18,7 @@ Como jogador de BDO, senti muita falta de um monitor de ping e FPS nativo dentro
 
 ## ✨ Funcionalidades
 
+- **Detecção Dinâmica de Servidor:** Identifica automaticamente o IP e a porta de gameplay activa do BDO, adaptando-se instantaneamente quando você troca de canal (ex: Balenos, Serendia, Temporada) sem quebrar o monitoramento ou precisar reiniciar o script.
 - **Overlay Transparente:** Interface minimalista que remove as bordas do Windows e se integra ao jogo.
 - **Sempre no Topo (Always on Top):** Garante que o contador de ping fique visível acima da janela do jogo.
 - **Indicador Visual por Cor:**
@@ -28,7 +28,7 @@ Como jogador de BDO, senti muita falta de um monitor de ping e FPS nativo dentro
   - 🟡 **Amarelo:** Conexão moderada (< 90ms)
   - 🔴 **Vermelho:** Latência alta ou falha de conexão
 
-    **FPS**
+  **FPS**
   - 🟢 **Verde:** FPS Bom (> 60 FPS)
   - 🟡 **Amarelo:** FPS Razoável (entre 59 FPS e 20 FPS)
   - 🔴 **Vermelho:** FPS Ruim (< 20 FPS)
@@ -51,7 +51,7 @@ Este projeto é um **monitor externo**, não um cheat. Ele **não interage** com
 
 ### O que ele faz
 
-- **Ping:** mede latência via `socket` puro (UDP/TCP) até o servidor SA — exatamente como o comando `ping` do Windows.
+- **Ping Automatizado:** Varre as conexões de rede ativas estabelecidas pelo processo `BlackDesert64.exe` através da biblioteca `psutil`. Ele localiza a faixa de portas de comunicação da Pearl Abyss (faixas `8880-8890` e `9000-9010`), priorizando os canais principais de gameplay (`8889` ou `9009`). A latência é medida via `socket` puro (UDP/TCP) até o IP descoberto.
 - **FPS:** obtém contadores via **ETW (Event Tracing for Windows)** no provedor público `Microsoft-Windows-DXGI`. É o próprio Windows reportando quantos frames foram apresentados por segundo, via `pywintrace`. Nenhum hook em DirectX, nenhuma injeção.
 - **Detecção de jogo ativo:** usa `win32gui` + `psutil` apenas para verificar se o processo `BlackDesert64` está em primeiro plano — nada é lido ou escrito nele.
 - **Interface:** overlay Tkinter transparente, sempre no topo. Uma janela comum do Windows, como Discord ou Steam.
@@ -68,6 +68,7 @@ Este projeto é um **monitor externo**, não um cheat. Ele **não interage** com
 ### Assinatura
 
 O executável é assinado com certificado self-signed, que garante a integridade do arquivo (não foi alterado após a publicação) e tem timestamp válido. Por ser um projeto gratuito e de código aberto, não usamos certificado comercial pago — o que significa que o Windows SmartScreen pode exibir um alerta na primeira execução. A confiança vem do código-fonte auditável, disponível neste repositório.
+
 ---
 
 ## 📁 Estrutura do Projeto
@@ -81,7 +82,7 @@ BDO_SA_Ping/
 │   └── img.png          # Print da tela do Black Desert Online com BDO Ping
 ├── src/
 │   ├── __init__.py      # Inicializador do pacote
-│   ├── config.py        # Variáveis de ambiente e IPs dos servidores
+│   ├── config.py        # Variáveis de ambiente e algoritmo de varredura dinâmica de IPs
 │   ├── fps.py           # pywintrace para "escutar" os eventos do Windows (ETW) do provedor Microsoft-Windows-DXGI (monitor de FPS)
 │   ├── ping.py          # Lógica de comunicação de rede
 │   ├── overlay.py       # Interface gráfica e loop assíncrono
@@ -97,6 +98,7 @@ BDO_SA_Ping/
 ### Pré-requisitos
 
 - **Python 3.x** instalado no seu computador.
+- Biblioteca **psutil** instalada (`pip install psutil`).
 
 ### Execução Rápida (Windows)
 
@@ -112,7 +114,7 @@ Caso queira fechar a aplicação, basta clicar com o **botão direito do mouse**
 
 Caso prefira rodar manualmente pelo terminal ou prompt de comando na raiz do projeto:
 
-```
+```bash
 python -m src.main
 ```
 
@@ -120,13 +122,15 @@ python -m src.main
 
 ## ⚙️ Personalização
 
-Se você quiser alterar o servidor de testes ou o tempo de atualização, basta abrir o arquivo `src/config.py` e modificar as variáveis:
+As configurações de intervalos de varredura e taxas de atualização podem ser personalizadas diretamente no arquivo `src/config.py`:
 
 ```python
-IP_SERVIDOR_BDO = "20.206.139.219"   # IP do servidor de destino
-PORTA_BDO = 8884                     # Porta de comunicação
-INTERVALO_MILISSEGUNDOS = 1000       # Tempo de espera entre cada checagem
+NOME_PROCESSO_EXE = "BlackDesert64.exe"  # Nome do executável do jogo
+INTERVALO_FPS_MS = 500                   # Tempo de atualização do número de FPS na tela
+INTERVALO_MILISSEGUNDOS = 1000          # Tempo de atualização da checagem do Ping e conexões
 ```
+
+*Nota: O script gerencia de forma inteligente a descoberta do IP e da porta remota, eliminando a necessidade de definir manualmente os endereços de servidores da distribuidora.*
 
 ---
 
