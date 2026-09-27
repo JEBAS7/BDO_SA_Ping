@@ -88,7 +88,8 @@ BDO_SA_Ping/
 │   ├── overlay.py       # Interface gráfica e loop assíncrono
 │   └── main.py          # Ponto de entrada (Entrypoint) do programa
 ├── tests/
-│    ├── diagnostico_conexoes_bdo.py # Script de teste das portas remotas do BDO
+│    ├── __init__.py  
+│    ├── diagnostico_conexoes_bdo.py # Script de teste das portas remotas do BDO como teste para implementar a varredura dinâmica de IPs em config.py
 ├── .gitignore           # Para que o repositório tenha apenas pastas e arquivos relevantes ao projeto
 ├── BDO_SA_Ping.iss      # Script de inno setup para criar o instalador do BDO_SA_Ping
 ├── BDO_SA_Ping.spec     # Especificações da criação do BDO_SA_Ping.exe
