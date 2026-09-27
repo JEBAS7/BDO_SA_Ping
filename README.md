@@ -87,8 +87,16 @@ BDO_SA_Ping/
 │   ├── ping.py          # Lógica de comunicação de rede
 │   ├── overlay.py       # Interface gráfica e loop assíncrono
 │   └── main.py          # Ponto de entrada (Entrypoint) do programa
+├── tests/
+│    ├── diagnostico_conexoes_bdo.py # Script de teste das portas remotas do BDO
+├── .gitignore           # Para que o repositório tenha apenas pastas e arquivos relevantes ao projeto
+├── BDO_SA_Ping.iss      # Script de inno setup para criar o instalador do BDO_SA_Ping
+├── BDO_SA_Ping.spec     # Specificações da criação do BDO_SA_Ping.exe
+├── LICENSE              # Licença MIT do projeto
 ├── pyping.bat           # Inicializador rápido para Windows
-└── README.md            # Documentação do projeto
+├── README.md            # Documentação do projeto
+├── requirements.txt     # Para instalação dos pacotes essenciais para execução do projeto
+└── version_info.txt     # Para descrição de versão do projeto
 ```
 
 ---
