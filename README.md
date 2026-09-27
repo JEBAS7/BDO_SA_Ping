@@ -39,6 +39,11 @@ Como jogador de BDO, senti muita falta de um monitor de ping e FPS nativo dentro
 
 ---
 
+## Limitações conhecidas
+
+O overlay não aparece em modo Tela Cheia (exclusiva), pois esse modo faz o jogo assumir controle direto da GPU, ignorando o compositor do Windows (DWM) — nenhuma janela externa consegue desenhar por cima nesse caso. A captura de ping/FPS continua rodando normalmente por trás.
+Use Tela Cheia em Janela (borderless) para o overlay aparecer normalmente.
+
 ## 🛡️ Não é um cheat — como funciona
 
 Este projeto é um **monitor externo**, não um cheat. Ele **não interage** com o cliente do Black Desert Online de nenhuma forma ativa.

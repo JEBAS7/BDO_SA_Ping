@@ -11,7 +11,9 @@ Como funciona:
 Sobre as telas de carregamento:
 - Durante o carregamento o jogo apresenta milhares de quadros por segundo, mais
   do que o Python consegue processar (~450 eventos/s). Se o atraso passar de
-  ~3 s, a sessão de captura é reiniciada (a fila velha é jogada fora).
+  ~5 s, a sessão de captura é reiniciada (a fila velha é jogada fora). Se os
+  reinícios se repetirem rápido demais, o intervalo entre eles cresce
+  sozinho (backoff) em vez de ficar reiniciando sem parar.
 - Valores acima de 1000 FPS são tratados como "sem valor" (é a tela de loading).
 
 Sobre sessões ETW "esquecidas":
@@ -49,8 +51,16 @@ ID_PRESENT_START = 42
 PREFIXO_SESSAO = "BDO_FPS_"
 SEGUNDOS_1601_ATE_1970 = 11644473600.0  # o TimeStamp do ETW é um FILETIME (desde 1601)
 ATRASO_MAXIMO_S = 8.0          # eventos mais velhos que isso são descartados
-LIMITE_REINICIO_S = 3.0        # atraso acima disso => reinicia a sessão de captura
-INTERVALO_MIN_REINICIO_S = 3.0 # tempo mínimo entre dois reinícios
+LIMITE_REINICIO_S = 5.0        # atraso acima disso => reinicia a sessão de captura
+                                # (era 3.0s; na prática a própria sessão ETW tem uma
+                                # folga de buffer de uns 3s, então 3.0 vivia disparando
+                                # reinício sem ter nada de errado, e cada reinício some
+                                # com o pouco de fila que existia — daí o loop infinito)
+INTERVALO_MIN_REINICIO_S = 3.0 # tempo mínimo entre dois reinícios (valor base do backoff)
+MAX_INTERVALO_REINICIO_S = 20.0  # teto do backoff quando os reinícios se repetem rápido
+JANELA_RESTARTS_RAPIDOS_S = 15.0  # janela usada para detectar reinícios em série
+LIMITE_RESTARTS_SEM_FILTRO = 3    # reinícios rápidos tolerados no modo sem_filtro
+                                   # antes de desistir dele e voltar pro modo filtro
 LIMITE_PARADA_S = 6.0          # sem NENHUM evento aceito por mais que isso => reinicia
                                 # (cobre o caso do jogo rodando normal, mas o Windows
                                 # parar de mandar Present_Start; o _atraso sozinho não
@@ -84,6 +94,8 @@ class MedidorFPS:
         self.ultima_excecao = None
         self._inicio_sessao = 0.0
         self._ultimo_reinicio = 0.0
+        self._historico_reinicios = deque(maxlen=20)  # timestamps, para o backoff
+        self._intervalo_reinicio_atual = INTERVALO_MIN_REINICIO_S
         self._cont = self._zerar_contadores()
 
     @staticmethod
@@ -215,7 +227,9 @@ class MedidorFPS:
 
     def _reiniciar_sessao(self):
         """Joga fora a fila atrasada: para a sessão velha (sem esperar) e abre uma nova."""
-        self._ultimo_reinicio = time.time()
+        agora = time.time()
+        self._ultimo_reinicio = agora
+        self._historico_reinicios.append(agora)
         self.reinicios += 1
         self._geracao += 1
         velho, self._job = self._job, None
@@ -224,8 +238,34 @@ class MedidorFPS:
         with self._lock:
             self._quadros.clear()
         self._atraso = 0.0
+
+        # Backoff: se os reinícios estão se repetindo rápido, dá mais fôlego
+        # antes do próximo — reiniciar sem parar não resolve nada (cada
+        # reinício em si tem um custo) e só empilha trabalho em cima de uma
+        # captura que já está sobrecarregada. Volta ao intervalo normal assim
+        # que a série de reinícios rápidos parar.
+        recentes = sum(1 for t in self._historico_reinicios if agora - t < JANELA_RESTARTS_RAPIDOS_S)
+        if recentes >= 3:
+            self._intervalo_reinicio_atual = min(
+                self._intervalo_reinicio_atual * 2, MAX_INTERVALO_REINICIO_S
+            )
+        else:
+            self._intervalo_reinicio_atual = INTERVALO_MIN_REINICIO_S
+
+        usar_filtro = self.modo == "filtro"
+        if self.modo == "sem_filtro" and recentes >= LIMITE_RESTARTS_SEM_FILTRO:
+            # O modo sem_filtro (todos os ~11 eventos por quadro, não só o
+            # Present_Start) foi tentado como recuperação, mas está reiniciando
+            # em série igual o filtro estava — ou seja, o volume extra de
+            # eventos só piorou a situação. Volta pro modo filtro, que é mais
+            # leve, em vez de ficar preso reiniciando sem_filtro pra sempre.
+            print("[FPS] Modo sem_filtro também entrou em loop de reinícios; voltando pro modo filtro.")
+            usar_filtro = True
+            self._historico_reinicios.clear()
+            self._limpeza_tentada = False
+
         try:
-            self._iniciar_sessao(usar_filtro=(self.modo == "filtro"))
+            self._iniciar_sessao(usar_filtro=usar_filtro)
         except Exception as e:
             print(f"[FPS] Falha ao reiniciar a sessão ETW: {e}")
 
@@ -252,7 +292,7 @@ class MedidorFPS:
 
     def _vigiar_atraso(self):
         """Se o Python ficou muito atrasado em relação ao Windows, reinicia a captura."""
-        if self._atraso > LIMITE_REINICIO_S and (time.time() - self._ultimo_reinicio) > INTERVALO_MIN_REINICIO_S:
+        if self._atraso > LIMITE_REINICIO_S and (time.time() - self._ultimo_reinicio) > self._intervalo_reinicio_atual:
             print(f"[FPS] Fila atrasada ({self._atraso:.1f}s); reiniciando a captura.")
             self._reiniciar_sessao()
 
@@ -269,7 +309,7 @@ class MedidorFPS:
         if not self._pids or not self._ultimo_evento:
             return
         parado_ha = time.time() - self._ultimo_evento
-        if parado_ha > LIMITE_PARADA_S and (time.time() - self._ultimo_reinicio) > INTERVALO_MIN_REINICIO_S:
+        if parado_ha > LIMITE_PARADA_S and (time.time() - self._ultimo_reinicio) > self._intervalo_reinicio_atual:
             print(f"[FPS] Sem eventos do jogo há {parado_ha:.1f}s; reiniciando a captura.")
             self._reiniciar_sessao()
 
@@ -333,6 +373,19 @@ class MedidorFPS:
             nome = (p.info.get("name") or "").lower()
             if nome == self.nome_processo_exe:
                 pids.add(p.info["pid"])
+
+        if pids and not self._pids:
+            # O jogo acabou de ser detectado (antes não havia PID nenhum).
+            # Se o overlay foi aberto ANTES do jogo, a janela de tolerância
+            # (ESPERA_FILTRO_S) não pode ser contada a partir da abertura do
+            # app: é preciso recomeçá-la a partir de agora, senão
+            # _vigiar_sessao acha que a captura está "morta" (do_jogo == 0)
+            # antes mesmo de dar tempo do primeiro evento chegar, e fica
+            # reiniciando a sessão à toa (FPS piscando entre "--" e valor).
+            self._inicio_sessao = time.time()
+            self._cont = self._zerar_contadores()
+            self._limpeza_tentada = False
+
         self._pids = pids
 
     def _ao_receber_evento(self, x):
