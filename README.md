@@ -1,6 +1,6 @@
 # BDO SA Ping Overlay 🎮📈
 
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/780bdd95-71f9-4c42-a88e-562a0b684bc4" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/1d9a682d-b0f6-4bcb-a177-4567bcc51e0c" />
 
 
 Um utilitário leve e limpo desenvolvido em Python para monitorar a latência (ping) e FPS em tempo real diretamente na tela do jogo **Black Desert Online (Servidor SA)**. O programa cria uma sobreposição (overlay) transparente e móvel, permitindo que você acompanhe a estabilidade da sua conexão sem perder o foco na gameplay.
