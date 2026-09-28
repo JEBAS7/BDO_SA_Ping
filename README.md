@@ -96,7 +96,7 @@ BDO_SA_Ping/
 ├── .gitignore           # Mantém no repositório apenas pastas e arquivos relevantes ao projeto
 ├── BDO_SA_Ping.iss      # Script do Inno Setup para criar o instalador do BDO_SA_Ping
 ├── BDO_SA_Ping.spec     # Especificações do PyInstaller para gerar o BDO_SA_Ping.exe
-├── LICENSE              # Licença MIT do projeto
+├── LICENSE              # Licença Apache-2.0 license do projeto
 ├── pyping.bat           # Inicializador rápido para Windows
 ├── README.md            # Documentação do projeto
 ├── requirements.txt     # Pacotes necessários para a execução do projeto
