@@ -152,4 +152,5 @@ INTERVALO_MILISSEGUNDOS = 1000           # Tempo de atualização da checagem do
 
 ## 📄 Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+Este projeto está sob a licença Apache 2.0. Veja o arquivo LICENSE para mais detalhes.
+
